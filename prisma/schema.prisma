@@ -1,0 +1,319 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User & Auth ──────────────────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  emailVerified  Boolean  @default(false)
+  password       String?
+  avatar         String?
+  image          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships    UserDepartment[]
+  assignedTasks  Task[]           @relation("AssignedTasks")
+  evalResponses  EvalResponse[]
+  reminders      Reminder[]
+  quickLinks     QuickLink[]
+  ddrDocuments   DdrDocument[]
+  ddrPeople      DdrPerson[]      @relation("DdrCreatedBy")
+  ddrReports     DdrReport[]
+  programs       Program[]        @relation("ProgramCreatedBy")
+  evaluations    Evaluation[]     @relation("EvalCreatedBy")
+  diagrams       Diagram[]        @relation("DiagramCreatedBy")
+  // Better Auth relations
+  sessions       Session[]
+  accounts       Account[]
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // "ops" | "finance" | "marketing" | "hr" | "tech"
+  createdAt DateTime @default(now())
+  okrs      Json     @default("[]") // PMOKR[] stored as JSON at dept level
+
+  members    UserDepartment[]
+  tasks      Task[]
+  reminders  Reminder[]
+  quickLinks QuickLink[]
+  ddrPeople  DdrPerson[]
+  ddrDocs    DdrDocument[]
+  ddrReports DdrReport[]
+  programs   Program[]
+  evals      Evaluation[]
+  diagrams   Diagram[]      @relation("DepartmentDiagrams")
+}
+
+model UserDepartment {
+  id           String     @id @default(cuid())
+  userId       String
+  departmentId String
+  role         String     // "head" | "manager" | "member"
+  createdAt    DateTime   @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, departmentId])
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+model Task {
+  id                 String       @id @default(cuid())
+  title              String
+  description        String?
+  status             String       @default("To do") // "To do"|"On going"|"Done"|"Pending"|"Not yet"
+  progressPercentage Int          @default(0)
+  dueDate            DateTime
+  startDate          DateTime?
+  division           String
+  assigneeId         String?
+  departmentId       String
+  dependencies       String[]     @default([])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  assignee     User?        @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
+  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  attachments  Attachment[]
+  links        TaskLink[]
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  name      String
+  url       String
+  type      String   // "application/pdf" | "image/png"
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskLink {
+  id     String @id @default(cuid())
+  taskId String
+  label  String
+  url    String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+// ─── Evaluations ──────────────────────────────────────────────────────────────
+
+model Evaluation {
+  id           String       @id @default(cuid())
+  title        String
+  questions    Json         // { id, type, label }[]
+  targetDeptId String
+  targetRoles  String       @default("all") // "all" | "member" | "manager" | "head" | comma-joined
+  deadline     DateTime
+  createdById  String
+  createdAt    DateTime     @default(now())
+
+  createdBy    User         @relation("EvalCreatedBy", fields: [createdById], references: [id])
+  department   Department   @relation(fields: [targetDeptId], references: [id])
+  responses    EvalResponse[]
+}
+
+model EvalResponse {
+  id           String     @id @default(cuid())
+  evaluationId String
+  userId       String
+  answers      Json       // { questionId, value }[]
+  submittedAt  DateTime   @default(now())
+
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  respondent   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluationId, userId])
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+model Reminder {
+  id           String     @id @default(cuid())
+  type         String     // "warning" | "info" | "meeting"
+  title        String
+  message      String
+  link         String?    // optional URL attached to the reminder
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+// ─── Brainstorm / Diagrams ───────────────────────────────────────────────────
+
+model Diagram {
+  id           String     @id @default(cuid())
+  title        String
+  nodes        Json       @default("[]") // custom UI nodes
+  connections  Json       @default("[]") // arrows between nodes
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  department   Department @relation("DepartmentDiagrams", fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("DiagramCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model QuickLink {
+  id           String     @id @default(cuid())
+  title        String
+  subtitle     String?
+  type         String     // "zoom" | "drive" | "link"
+  url          String?
+  meetingId    String?
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+// ─── DDR ─────────────────────────────────────────────────────────────────────
+
+model DdrPerson {
+  id               String     @id @default(cuid())
+  type             String     // "Mentor" | "Speaker" | "Judge" | "Participant" | "Internal"
+  name             String
+  role             String
+  contactInfo      String?
+  curriculumRef    String?
+  previousDivision String?
+  currentDivision  String
+  internalRole     String?    // "Chief" | "GM" | "Asso" (for Internal type)
+  departmentId     String
+  createdById      String
+  createdAt        DateTime   @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("DdrCreatedBy", fields: [createdById], references: [id])
+}
+
+model DdrDocument {
+  id           String     @id @default(cuid())
+  type         String     // "Draft"
+  documentType String     // "MoU" | "TOR" | "Proposal"
+  title        String
+  status       String     // "Pending Review" | "Approved" | "Draft"
+  lastModified String
+  owner        String
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation(fields: [createdById], references: [id])
+}
+
+model DdrReport {
+  id           String     @id @default(cuid())
+  title        String
+  type         String     // "Evaluation" | "Motivation"
+  date         String
+  summary      String?
+  percentage   Int?
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation(fields: [createdById], references: [id])
+}
+
+// ─── Programs ─────────────────────────────────────────────────────────────────
+
+model Program {
+  id           String     @id @default(cuid())
+  title        String
+  batch        String
+  status       String     // "Active" | "Upcoming" | "Completed"
+  participants Int        @default(0)
+  mentors      Int        @default(0)
+  location     String?
+  description  String?
+  date         String
+  startDate    String
+  endDate      String
+  progress     Int        @default(0)
+  team         String[]   @default([])
+  okrs         Json       @default("[]")  // PMOKR[] stored as JSON
+  departmentId String
+  createdById  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("ProgramCreatedBy", fields: [createdById], references: [id])
+}
+
+// ─── Better Auth Tables ────────────────────────────────────────────────────────
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
