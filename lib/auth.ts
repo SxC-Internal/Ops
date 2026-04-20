@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 export const APPROVED_EMAILS: Record<string, "head" | "manager" | "member"> = {
     // Admin / Developer
     "timanuel276@gmail.com": "head",
+    "td.internalteam@gmail.com": "head",
+    "rchardhans@gmail.com": "head",
     // Chief
     "darrelldamareka@gmail.com": "head",
     // Managers
