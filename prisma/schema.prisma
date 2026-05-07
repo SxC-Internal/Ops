@@ -269,6 +269,72 @@ model Program {
   createdBy  User       @relation("ProgramCreatedBy", fields: [createdById], references: [id])
 }
 
+// ─── Email Blast ──────────────────────────────────────────────────────────────
+
+enum EmailBlastStatus {
+  draft
+  pending_approval
+  approved
+  rejected
+  sent
+}
+
+model EmailBlast {
+  id              String               @id @default(cuid())
+  subject         String
+  body            String
+  contentMode     String               @default("text")
+  senderName      String?
+  senderEmail     String?
+  replyToEmail    String?
+  status          EmailBlastStatus     @default(draft)
+  composedBy      String
+  approvedBy      String?
+  rejectedBy      String?
+  rejectionReason String?
+  sentAt          DateTime?
+  sentCount       Int                  @default(0)
+  departmentId    String
+  isArchived      Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  recipients      EmailBlastRecipient[]
+  attachments     EmailBlastAttachment[]
+
+  @@index([departmentId, createdAt])
+  @@index([status])
+}
+
+model EmailBlastRecipient {
+  id      String     @id @default(cuid())
+  blastId String
+  email   String
+  blast   EmailBlast @relation(fields: [blastId], references: [id], onDelete: Cascade)
+
+  @@index([blastId])
+  @@index([email])
+  @@unique([blastId, email])
+}
+
+model EmailBlastAttachment {
+  id             String     @id @default(cuid())
+  blastId        String
+  kind           String
+  storageKey     String
+  publicUrl      String?
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  uploadedBy     String
+  createdAt      DateTime   @default(now())
+  blast          EmailBlast @relation(fields: [blastId], references: [id], onDelete: Cascade)
+
+  @@index([blastId, createdAt])
+  @@index([checksumSha256])
+  @@unique([blastId, checksumSha256])
+}
+
 // ─── Better Auth Tables ────────────────────────────────────────────────────────
 
 model Session {

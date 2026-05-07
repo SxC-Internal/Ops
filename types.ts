@@ -175,6 +175,7 @@ export enum View {
   MEMBERS = 'MEMBERS',
   SETTINGS = 'SETTINGS',
   WORKSPACE = 'WORKSPACE',
+  EMAIL_BLAST = 'EMAIL_BLAST',
   // PM Views
   PM_DASHBOARD = 'PM_DASHBOARD',
   KANBAN = 'KANBAN',
@@ -185,3 +186,49 @@ export enum View {
 }
 
 export type Theme = 'dark' | 'light';
+
+// ─── Email Blast ──────────────────────────────────────────────────────────────
+
+export type EmailBlastStatus = 'draft' | 'pending_approval' | 'sent' | 'rejected' | 'approved';
+
+export interface DbEmailBlast {
+  id: UUID;
+  subject: string;
+  body: string;
+  contentMode: 'text' | 'html';
+  senderName?: string;
+  senderEmail?: string;
+  replyToEmail?: string;
+  status: EmailBlastStatus;
+  composedBy: UUID;
+  approvedBy?: UUID;
+  rejectedBy?: UUID;
+  rejectionReason?: string;
+  sentAt?: string;
+  sentCount: number;
+  departmentId: UUID;
+  createdAt: string;
+  isArchived?: boolean;
+}
+
+export interface DbEmailBlastRecipient {
+  id: UUID;
+  blastId: UUID;
+  email: string;
+}
+
+export type EmailBlastAttachmentKind = 'image' | 'file';
+
+export interface DbEmailBlastAttachment {
+  id: UUID;
+  blastId: UUID;
+  kind: EmailBlastAttachmentKind;
+  storageKey: string;
+  publicUrl?: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksumSha256: string;
+  uploadedBy: UUID;
+  createdAt: string;
+}

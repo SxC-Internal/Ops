@@ -18,6 +18,7 @@ import BrainstormView from "@/components/pm/brainstorm/BrainstormView";
 import DDRView from "@/components/pm/ddr/DDRView";
 import TrackingView from "@/components/pm/tracking/TrackingView";
 import { PMTasksProvider } from "@/context/PMTasksContext";
+import EmailBlastView from "@/components/email-blast/EmailBlastView";
 
 export function renderActiveView(params: {
   activeView: View;
@@ -32,6 +33,9 @@ export function renderActiveView(params: {
 
   switch (activeView) {
 
+
+    case View.EMAIL_BLAST:
+      return <EmailBlastView user={currentUser} theme={theme} />;
 
     case View.DATA_REVIEW:
       return <DataReviewView />;

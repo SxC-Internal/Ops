@@ -14,6 +14,7 @@ import {
   BarChart3,
   ChevronsLeft,
   ChevronsRight,
+  Mail,
 } from "lucide-react";
 import { View } from "@/types";
 import type { User } from "@/types";
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { icon: Lightbulb, label: "Brainstorm", view: View.BRAINSTORM },
   { icon: Database, label: "DDR", view: View.DDR },
   { icon: BarChart3, label: "Tracking", view: View.TRACKING },
+  { icon: Mail, label: "Email Blast", view: View.EMAIL_BLAST },
   { icon: Users, label: "Members", view: View.MEMBERS },
   { icon: Settings, label: "Settings", view: View.SETTINGS },
 ];
@@ -82,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </p>
           )}
           <nav className="space-y-0.5">
-            {NAV_ITEMS.slice(0, 6).map((item) => (
+            {NAV_ITEMS.slice(0, 7).map((item) => (
               <SidebarItem
                 key={item.view}
                 icon={item.icon}
@@ -100,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </p>
             )}
 
-            {NAV_ITEMS.slice(6).map((item) => (
+            {NAV_ITEMS.slice(7).map((item) => (
               <SidebarItem
                 key={item.view}
                 icon={item.icon}
@@ -176,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               Project Management
             </p>
             <nav className="flex-1 space-y-1 overflow-y-auto">
-              {NAV_ITEMS.slice(0, 6).map((item) => (
+              {NAV_ITEMS.slice(0, 7).map((item) => (
                 <SidebarItem
                   key={item.view}
                   icon={item.icon}
@@ -191,7 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 Organization
               </p>
 
-              {NAV_ITEMS.slice(6).map((item) => (
+              {NAV_ITEMS.slice(7).map((item) => (
                 <SidebarItem
                   key={item.view}
                   icon={item.icon}
